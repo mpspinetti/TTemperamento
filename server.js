@@ -3,10 +3,10 @@ const express = require("express");
 const { Pool } = require("pg");
 const { PDFDocument } = require("pdf-lib");
 const fontkit = require("@pdf-lib/fontkit");
-const fs = require("fs");
-const { createCanvas } = require("canvas");
+const sharp = require("sharp");
 const cors = require("cors");
-
+const fs = require("fs");
+const path = require("path");
 const app = express(); 
 
 app.use(cors({
@@ -193,45 +193,45 @@ app.get("/gerar-pdf/:id", async (req, res) => {
 
         console.log("✅ Dados do teste encontrados!");
         const dados = dadosResult.rows[0];
+                      
+        // 🔹 Torne a função assíncrona adicionando `async`
+        async function gerarGraficoPonteiro(angleIndex) {
+             const angles = [10, 45, 80, 100, 135, 170, 190, 225, 260, 290, 315, 350];
+             const currentAngle = angles[angleIndex] || 10;
 
-        
-        // Função para desenhar o gráfico do ponteiro do relógio
-        function gerarGraficoPonteiro(angleIndex) {
-            const angles = [10, 45, 80, 100, 135, 170, 190, 225, 260, 290, 315, 350];
-            const currentAngle = angles[angleIndex] || 10;
-        
-            const canvas = createCanvas(200, 200); // Define um canvas de 200x200px
-            const ctx = canvas.getContext("2d");
-        
-            // Definir centro do gráfico
-            const centerX = 100;
-            const centerY = 100;
-            const radius = 80;
-        
-            // Desenhar o círculo
-            //ctx.beginPath();
-            //ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
-            //ctx.strokeStyle = "black";
-            //ctx.lineWidth = 2;
-            //ctx.stroke();
-        
-            // Calcular coordenadas do ponteiro
-            const radian = (Math.PI / 180) * (currentAngle - 90);
-            const xEnd = centerX + Math.cos(radian) * radius;
-            const yEnd = centerY + Math.sin(radian) * radius;
-        
-            // Desenhar ponteiro
-            ctx.beginPath();
-            ctx.moveTo(centerX, centerY);
-            ctx.lineTo(xEnd, yEnd);
-            ctx.strokeStyle = "black";
-            ctx.lineWidth = 1;
-            ctx.stroke();
-        
-            return canvas.toBuffer("image/png");
-        }
-        
-        
+            
+        // 🔹 Definição das dimensões da imagem
+        const width = 200;  // ✅ Corrigindo o erro "width is not defined"
+        const height = 200; // ✅ Garantindo que "height" também está definido
+        const centerX = width / 2;
+        const centerY = height / 2;
+        const radius = 80;
+
+        // 🔹 Calcular coordenadas do ponteiro do relógio
+        const radian = (Math.PI / 180) * (currentAngle - 90);
+        const xEnd = Math.round(centerX + Math.cos(radian) * radius);
+        const yEnd = Math.round(centerY + Math.sin(radian) * radius);
+
+        // Criar um SVG para o gráfico do ponteiro do relógio
+        const svg = `
+            <svg width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg">
+                <rect width="100%" height="100%" fill="none"/>
+                <line x1="${centerX}" y1="${centerY}" x2="${xEnd}" y2="${yEnd}" stroke="black" stroke-width="2"/>
+            </svg>
+        `;
+
+        try {
+            // Converter o SVG em PNG usando Sharp e retornar como Buffer
+            const pngBuffer = await sharp(Buffer.from(svg))
+                .png({ alphaQuality: 100 })  // 🔹 Mantém transparência
+                .toBuffer();
+
+        return pngBuffer;
+    } catch (error) {
+        console.error("🚨 Erro ao gerar gráfico do ponteiro:", error);
+        throw new Error("Falha ao gerar gráfico do ponteiro.");
+    }
+}        
         // Converter subtemperamento para índice de gráfico
         const subTemperamentoIndex = {
         "Faisca": 0, "Fogo": 1, "Brasa": 2,  
@@ -242,7 +242,10 @@ app.get("/gerar-pdf/:id", async (req, res) => {
 
             
             // Gerar o gráfico
-            const graficoBuffer = gerarGraficoPonteiro(subTemperamentoIndex);
+            const graficoBuffer = await gerarGraficoPonteiro(subTemperamentoIndex);
+            if (!graficoBuffer || !(graficoBuffer instanceof Uint8Array)) {
+                throw new Error("❌ Erro: Buffer da imagem inválido.");
+            }
             const graficoImage = await pdfDoc.embedPng(graficoBuffer);
 
             // Definir posição e tamanho da imagem no PDF
@@ -252,8 +255,6 @@ app.get("/gerar-pdf/:id", async (req, res) => {
                 width: 155,
                 height: 155
             });
-        
-        
         
                         
         // Ajustar a largura máxima do parágrafo
