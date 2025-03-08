@@ -1,0 +1,11 @@
+﻿{
+    "usuario_id": 4,
+    "nome": "José Álvares de Souza",
+    "email": "jose@email.com",
+    "telefone": "+55 31 98765-4321",
+    "data_nascimento": "1985-07-20",
+    "tempo_teste": "00:12:40",
+    "respostas": ["A", "B", "A", "A", "B", "A", "A", "B", "B", "A", "B",  
+                  "A", "A", "B", "A", "B", "A", "A", "B", "B", "A", "B",
+                  "Faisca", "Fogo", "Brasa", "Terra", "Vento", "Água", "Brisa", "Ar", "Vapor"]
+}

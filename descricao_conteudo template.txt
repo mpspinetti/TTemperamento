@@ -1,0 +1,54 @@
+Operação bem sucedida, vamos retornar ao prompt anterior.
+
+As informações que serão incluidas no no relatório de temperamento serão:
+
+1a pagina - secao 1:
+ID (numero sequencial da tabela de dados)
+Nome (nome completo)
+Data de Nascimento (dia/mes em 3 letras/ano)
+Idade
+Data do este
+Tempo de teste (tempo que a pessoa levou para responder)
+telefone (codigo do pais, codigo de area e telefone)
+email
+
+1a pagina - secao 2:
+Temperamento
+Subtemperamento
+Grafico de Temperamento: Um grafico em formato de ponteiro de cronometro, apontando o temperamento em um desenho em formato de pizza ja incluido no template.
+
+1a pagina - secao 3:
+O temperamento: (a ser posicionado em uma frase já pré escrita)
+Descrição do temperamento
+
+2a pagina - secao 4:
+subtemperamento: (a ser posicionado em uma frase já pré escrita)
+Caracteristicas do subtemperamento:  (texto recuperado do banco de dados, previamente escrito)
+
+2a pagina - secao 5:
+Temperamento: (a ser posicionado em uma frase já pré escrita)
+Comportamento do temperamento: (texto recuperado do banco de dados, previamente escrito)
+
+3a pagina - secao 6:
+Temperamento: (a ser posicionado em uma frase já pré escrita)
+Lado positivo do temperamento: (texto recuperado do banco de dados, previamente escrito)
+
+3a pagina - secao 7:
+Temperamento: (a ser posicionado em uma frase já pré escrita)
+pontos de atenção do temperamento: (texto recuperado do banco de dados, previamente escrito)
+
+4a pagina - secao 8:
+Temperamento: (a ser posicionado em uma frase já pré escrita)
+desafios do temperamento: (texto recuperado do banco de dados, previamente escrito)
+
+4a pagina - secao 9:
+Temperamento: (a ser posicionado em uma frase já pré escrita)
+Sugestao de desenvolvimento do temperamento: (texto recuperado do banco de dados, previamente escrito)
+
+5a pagina - secao 10:
+Temperamento: (a ser posicionado em uma frase já pré escrita)
+Personagens biblicos que são temperamento: (texto recuperado do banco de dados, previamente escrito)
+
+2a pagina - secao 5:
+Temperamento: (a ser posicionado em uma frase já pré escrita)
+Comportamento do temperamento: (texto recuperado do banco de dados, previamente escrito)
