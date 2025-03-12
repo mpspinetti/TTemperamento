@@ -48,11 +48,18 @@ pool.getConnection((err, connection) => {
 //Endpoint para salvar todos os dados de uma só vez
 app.post("/salvar-resultado", async (req, res) => {
     try {
-        const { id_usuario, nome, email, telefone, lingua_teste, data_nascimento, Hora_inicio, Hora_conclusao, consent_info, consent_guardar, respostas } = req.body;
+        const { id_usuario, nome, email, telefone, lingua_teste, data_nascimento, hora_inicio, hora_conclusao, consent_info, consent_guardar, respostas } = req.body;
 
-        if (!nome || !email || !data_nascimento || !Hora_inicio || !Hora_conclusao || !respostas || respostas.length !== 42) {
-            console.error("❌ ERRO: O número de respostas não é 42! Respostas recebidas:", respostas.length);
-            return res.status(400).json({ mensagem: "Todas as 42 respostas são obrigatórias!" });
+        // 🔹 Verificar se todos os campos foram preenchidos corretamente
+        if (!nome || !email || !data_nascimento || !hora_inicio || !hora_conclusao || !respostas) {
+            console.error("❌ ERRO: Campos obrigatórios ausentes!");
+            return res.status(400).json({ mensagem: "Todos os campos obrigatórios devem ser preenchidos corretamente!" });
+        }
+
+        // 🔹 Verificar se a lista de respostas contém exatamente 42 itens
+        if (!Array.isArray(respostas) || respostas.length !== 42) {
+            console.error("❌ ERRO: O número de respostas não é 42! Respostas recebidas:", respostas.length, respostas);
+            return res.status(400).json({ mensagem: `Número incorreto de respostas. Recebido: ${respostas.length}` });
         }
 
         // 🔹 Definir data_teste corretamente
@@ -71,9 +78,12 @@ app.post("/salvar-resultado", async (req, res) => {
 
         console.log("📌 Cálculos realizados:", { idade, tempo_teste, temperamento, subtemperamento });
 
+        // 🔹 Garantir que a lista de respostas tenha exatamente 42 valores
+        console.log("📌 Número de respostas confirmadas:", respostas.length);
+
         // 🔹 Query corrigida para garantir que o número de colunas e valores está correto
         const query = `INSERT INTO resultados 
-                       (id_usuario, Hora_inicio, Hora_conclusao, nome, email, telefone, lingua_teste, data_nascimento, data_teste, tempo_teste, temperamento, subtemperamento, consent_info, consent_guardar,
+                       (id_usuario, hora_inicio, hora_conclusao, nome, email, telefone, lingua_teste, data_nascimento, data_teste, tempo_teste, temperamento, subtemperamento, consent_info, consent_guardar,
                         q1, q2, q3, q4, q5, q6, q7, q8, q9, q10,
                         q11, q12, q13, q14, q15, q16, q17, q18, q19, q20,
                         q21, q22, q23, q24, q25, q26, q27, q28, q29, q30,
@@ -87,7 +97,7 @@ app.post("/salvar-resultado", async (req, res) => {
         console.log("📌 Executando query...");
 
         await pool.query(query, [
-            id_usuario, Hora_inicio, Hora_conclusao, nome, email, telefone, lingua_teste, data_nascimento, data_teste, tempo_teste, temperamento, subtemperamento, consent_info, consent_guardar,
+            id_usuario, hora_inicio, hora_conclusao, nome, email, telefone, lingua_teste, data_nascimento, data_teste, tempo_teste, temperamento, subtemperamento, consent_info, consent_guardar,
             ...respostas
         ]);
 
