@@ -44,7 +44,6 @@ pool.getConnection((err, connection) => {
     connection.release(); // Libera a conexão
 });
 
-
 //Endpoint para salvar todos os dados de uma só vez
 app.post("/salvar-resultado", async (req, res) => {
     try {
@@ -62,7 +61,7 @@ app.post("/salvar-resultado", async (req, res) => {
             return res.status(400).json({ mensagem: `Número incorreto de respostas. Recebido: ${respostas.length}` });
         }
 
-        // 🔹 Definir data_teste corretamente
+        // 🔹 Garantir que data_teste esteja definida corretamente
         const data_teste = new Date().toISOString().split("T")[0];
 
         console.log("📌 Data do teste:", data_teste);
@@ -78,8 +77,8 @@ app.post("/salvar-resultado", async (req, res) => {
 
         console.log("📌 Cálculos realizados:", { idade, tempo_teste, temperamento, subtemperamento });
 
-        // 🔹 Garantir que a lista de respostas tenha exatamente 42 valores
-        console.log("📌 Número de respostas confirmadas:", respostas.length);
+        // 🔹 Log das respostas recebidas para garantir que temos 42 valores
+        console.log("📌 Respostas recebidas:", respostas);
 
         // 🔹 Query corrigida para garantir que o número de colunas e valores está correto
         const query = `INSERT INTO resultados 
