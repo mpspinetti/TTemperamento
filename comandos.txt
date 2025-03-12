@@ -27,9 +27,11 @@ delete from temperamentos where id=11
 
 COMANDOS PARA UPLOAD GITHUB
 
+git add .
 git status
-git commit -m "atualizando server.js basico novamente" (comentário do upload)
-git push origin main
 git add server.js
+git commit -m "atualizando server.js basico novamente"    ----- (comentário do upload)
+git push origin main
+
 
 Depois usar manual deploy (clear and deploy)

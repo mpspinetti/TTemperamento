@@ -48,14 +48,19 @@ pool.getConnection((err, connection) => {
 //Endpoint para salvar todos os dados de uma só vez
 app.post("/salvar-resultado", async (req, res) => {
     try {
-        const { nome, email, telefone, lingua_teste, data_nascimento, hora_inicio, hora_conclusao, respostas } = req.body;
+        const { nome, email, telefone, lingua_teste, data_nascimento, hora_inicio, hora_conclusao, consent_info, consent_guardar, respostas } = req.body;
 
         if (!nome || !email || !data_nascimento || !hora_inicio || !hora_conclusao || !respostas || respostas.length !== 42) {
             return res.status(400).json({ mensagem: "Todos os campos obrigatórios devem ser preenchidos corretamente!" });
         }
 
-        // 🔹 Calcula idade
-        const idade = calcularIdade(data_nascimento);
+        // 🔹 Definir data_teste corretamente
+        const data_teste = new Date().toISOString().split("T")[0];
+
+        console.log("📌 Data do teste:", data_teste);
+
+        // 🔹 Calcula idade corretamente
+        const idade = calcularIdade(data_nascimento, data_teste);
         
         // 🔹 Calcula tempo de teste
         const tempo_teste = calcularTempoTeste(hora_inicio, hora_conclusao);
@@ -63,29 +68,35 @@ app.post("/salvar-resultado", async (req, res) => {
         // 🔹 Calcula temperamento e subtemperamento
         const { temperamento, subtemperamento } = calcularPontuacao(respostas);
 
-        // 🔹 Query para inserir todos os dados de uma vez na tabela resultados
+        console.log("📌 Cálculos realizados:", { idade, tempo_teste, temperamento, subtemperamento });
+
+        // 🔹 Query para inserir todos os dados de uma vez
         const query = `INSERT INTO resultados 
-                       (nome, email, telefone, lingua_teste, data_nascimento, data_teste, hora_inicio, hora_conclusao, idade, tempo_teste, temperamento, subtemperamento,
+                       (id_usuario, hora_inicio, hora_conclusao, nome, email, telefone, lingua_teste, data_nascimento, data_teste, tempo_teste, temperamento, subtemperamento, consent_info, consent_guardar,
                         q1, q2, q3, q4, q5, q6, q7, q8, q9, q10,
                         q11, q12, q13, q14, q15, q16, q17, q18, q19, q20,
                         q21, q22, q23, q24, q25, q26, q27, q28, q29, q30,
                         q31, q32, q33, q34, q35, q36, q37, q38, q39, q40, q41, q42)
                        VALUES 
-                       (?, ?, ?, ?, ?, NOW(), ?, ?, ?, ?, ?, ?, 
+                       (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 
                         ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 
                         ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 
                         ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
 
+        console.log("📌 Executando query...");
+
         await pool.query(query, [
-            nome, email, telefone, lingua_teste, data_nascimento, hora_inicio, hora_conclusao, idade, tempo_teste, temperamento, subtemperamento,
+            null, hora_inicio, hora_conclusao, nome, email, telefone, lingua_teste, data_nascimento, data_teste, tempo_teste, temperamento, subtemperamento, consent_info, consent_guardar,
             ...respostas
         ]);
+
+        console.log("✅ Dados inseridos com sucesso!");
 
         res.status(201).json({ mensagem: "Resultado salvo com sucesso!" });
 
     } catch (error) {
         console.error("❌ Erro ao salvar resultado:", error);
-        res.status(500).json({ mensagem: "Erro ao salvar resultado." });
+        res.status(500).json({ mensagem: "Erro ao salvar resultado.", erro: error.message });
     }
 });
 
