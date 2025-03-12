@@ -1,0 +1,12 @@
+
+FRONTEND-
+https://github.com/mpspinetti/TTemperamento
+https://dashboard.render.com/
+
+
+BACKEND
+NODES
+MYSQL
+
+SERVER-
+https://br996.hostgator.com.br:2083/cpsess5976976794/frontend/jupiter/index.html?login=1&post_login=78580449615094

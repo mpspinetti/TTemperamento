@@ -17,3 +17,19 @@ Invoke-WebRequest -Uri "http://localhost:5000/salvar-resultado" `
 
 Salvar PDF
 http://localhost:5000/gerar-pdf/30
+
+
+
+deletar linha pgAdmin4
+
+delete from temperamentos where id=11
+
+
+COMANDOS PARA UPLOAD GITHUB
+
+git status
+git commit -m "atualizando server.js basico novamente" (comentário do upload)
+git push origin main
+git add server.js
+
+Depois usar manual deploy (clear and deploy)
