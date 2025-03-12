@@ -45,67 +45,47 @@ pool.getConnection((err, connection) => {
 });
 
 
-//Cadastro do usuario
-app.post("/cadastrar-usuario", async (req, res) => {
+//Endpoint para salvar todos os dados de uma só vez
+app.post("/salvar-resultado", async (req, res) => {
     try {
-        const { nome, email, telefone, lingua_teste, data_nascimento } = req.body;
+        const { nome, email, telefone, lingua_teste, data_nascimento, hora_inicio, hora_conclusao, respostas } = req.body;
 
-        if (!nome || !email || !data_nascimento || !lingua_teste) {
-            return res.status(400).json({ mensagem: "Todos os campos obrigatórios devem ser preenchidos!" });
+        if (!nome || !email || !data_nascimento || !hora_inicio || !hora_conclusao || !respostas || respostas.length !== 42) {
+            return res.status(400).json({ mensagem: "Todos os campos obrigatórios devem ser preenchidos corretamente!" });
         }
 
-        const query = `INSERT INTO resultados (nome, email, telefone, lingua_teste, data_nascimento, data_teste) 
-                       VALUES (?, ?, ?, ?, ?, NOW())`;
-        const [result] = await pool.query(query, [nome, email, telefone, lingua_teste, data_nascimento]);
-
-        res.status(201).json({ mensagem: "Usuário cadastrado com sucesso!", id_usuario: result.insertId });
-
-    } catch (error) {
-        console.error("❌ Erro ao cadastrar usuário:", error);
-        res.status(500).json({ mensagem: "Erro ao cadastrar usuário." });
-    }
-});
-
-
-
-//Salvar resposta
-app.post("/salvar-respostas", async (req, res) => {
-    try {
-        const { id_usuario, hora_inicio, hora_conclusao, respostas } = req.body;
-
-        if (!id_usuario || !hora_inicio || !hora_conclusao || !respostas || respostas.length !== 42) {
-            return res.status(400).json({ mensagem: "ID do usuário, horários e 42 respostas são obrigatórios!" });
-        }
-
-        // 🔹 Buscar dados do usuário para calcular idade
-        const [userRows] = await pool.query("SELECT data_nascimento, data_teste FROM resultados WHERE id = ?", [id_usuario]);
-        if (userRows.length === 0) {
-            return res.status(404).json({ mensagem: "Usuário não encontrado." });
-        }
-
-        const { data_nascimento, data_teste } = userRows[0];
-        const idade = calcularIdade(data_nascimento, data_teste);
-        const tempoTeste = calcularTempoTeste(hora_inicio, hora_conclusao);
+        // 🔹 Calcula idade
+        const idade = calcularIdade(data_nascimento);
+        
+        // 🔹 Calcula tempo de teste
+        const tempo_teste = calcularTempoTeste(hora_inicio, hora_conclusao);
+        
+        // 🔹 Calcula temperamento e subtemperamento
         const { temperamento, subtemperamento } = calcularPontuacao(respostas);
 
-        // 🔹 Atualizar os resultados do usuário
-        const query = `UPDATE resultados SET 
-                        hora_inicio = ?, hora_conclusao = ?, idade = ?, tempo_teste = ?, 
-                        temperamento = ?, subtemperamento = ?, 
-                        q1=?, q2=?, q3=?, q4=?, q5=?, q6=?, q7=?, q8=?, q9=?, q10=?,
-                        q11=?, q12=?, q13=?, q14=?, q15=?, q16=?, q17=?, q18=?, q19=?, q20=?,
-                        q21=?, q22=?, q23=?, q24=?, q25=?, q26=?, q27=?, q28=?, q29=?, q30=?,
-                        q31=?, q32=?, q33=?, q34=?, q35=?, q36=?, q37=?, q38=?, q39=?, q40=?, 
-                        q41=?, q42=? 
-                      WHERE id = ?`;
+        // 🔹 Query para inserir todos os dados de uma vez na tabela resultados
+        const query = `INSERT INTO resultados 
+                       (nome, email, telefone, lingua_teste, data_nascimento, data_teste, hora_inicio, hora_conclusao, idade, tempo_teste, temperamento, subtemperamento,
+                        q1, q2, q3, q4, q5, q6, q7, q8, q9, q10,
+                        q11, q12, q13, q14, q15, q16, q17, q18, q19, q20,
+                        q21, q22, q23, q24, q25, q26, q27, q28, q29, q30,
+                        q31, q32, q33, q34, q35, q36, q37, q38, q39, q40, q41, q42)
+                       VALUES 
+                       (?, ?, ?, ?, ?, NOW(), ?, ?, ?, ?, ?, ?, 
+                        ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 
+                        ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 
+                        ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
 
-        await pool.query(query, [hora_inicio, hora_conclusao, idade, tempoTeste, temperamento, subtemperamento, ...respostas, id_usuario]);
+        await pool.query(query, [
+            nome, email, telefone, lingua_teste, data_nascimento, hora_inicio, hora_conclusao, idade, tempo_teste, temperamento, subtemperamento,
+            ...respostas
+        ]);
 
-        res.status(200).json({ mensagem: "Respostas salvas com sucesso!" });
+        res.status(201).json({ mensagem: "Resultado salvo com sucesso!" });
 
     } catch (error) {
-        console.error("❌ Erro ao salvar respostas:", error);
-        res.status(500).json({ mensagem: "Erro ao salvar respostas." });
+        console.error("❌ Erro ao salvar resultado:", error);
+        res.status(500).json({ mensagem: "Erro ao salvar resultado." });
     }
 });
 
@@ -121,6 +101,7 @@ function calcularPontuacao(respostas) {
         "Brisa": 0, "Ar": 0, "Vento": 0  
     };
 
+    // Processar respostas para determinar temperatura e umidade
     respostas.slice(0, 11).forEach((resposta) => {
         if (resposta === "A") contagemTemperatura.Quente++;
         if (resposta === "B") contagemTemperatura.Frio++;
@@ -131,6 +112,7 @@ function calcularPontuacao(respostas) {
         if (resposta === "B") contagemUmidade.Seco++;
     });
 
+    // Determinar temperamento final
     let temperaturaFinal = contagemTemperatura.Quente >= contagemTemperatura.Frio ? "Quente" : "Frio";
     let umidadeFinal = contagemUmidade.Úmido >= contagemUmidade.Seco ? "Úmido" : "Seco";
 
@@ -140,6 +122,7 @@ function calcularPontuacao(respostas) {
     if (temperaturaFinal === "Frio" && umidadeFinal === "Seco") temperamentoFinal = "Melancólico";
     if (temperaturaFinal === "Frio" && umidadeFinal === "Úmido") temperamentoFinal = "Fleumático";
 
+    // Processar respostas para determinar subtemperamento
     respostas.slice(22, 42).forEach((resposta) => {
         if (contagemSubtemperamentos[resposta] !== undefined) {
             contagemSubtemperamentos[resposta]++;
