@@ -44,53 +44,6 @@ pool.getConnection((err, connection) => {
     connection.release(); // Libera a conexão
 });
 
-// Middleware para permitir JSON no backend
-app.use(express.json());
-
-// Rota GET para exibir mensagem clara no navegador
-app.get("/registrar-linguagem", (req, res) => {
-    res.status(405).json({ mensagem: "Este endpoint aceita apenas requisições POST." });
-});
-
-// Inclusão Cadastro de Usuário
-// Inclusão Cadastro de Usuário
-app.post("/registrar-linguagem", async (req, res) => {
-    try {
-        const { lingua_teste, data_teste } = req.body;
-
-        if (!lingua_teste || !data_teste) {
-            return res.status(400).json({ mensagem: "Idioma e data do teste são obrigatórios!" });
-        }
-
-        // Corrigir a query SQL (verifique o nome correto da coluna no banco)
-        const query = `INSERT INTO resultados (lingua_teste, data_teste) VALUES (?, ?)`;
-        await pool.query(query, [lingua_teste, data_teste]);
-
-        res.status(201).json({ mensagem: "Idioma registrado com sucesso!" });
-
-    } catch (error) {
-        console.error("❌ Erro ao registrar idioma:", error);
-        res.status(500).json({ mensagem: "Erro ao registrar idioma." });
-    }
-});
-
-// Inclusão Cadastro de Usuário
-app.post("/cadastrar-usuario", async (req, res) => {
-    try {
-        const { nome, data_nascimento, telefone, email, consent_info, consent_guardar } = req.body;
-
-        // Corrigir a query SQL (verifique o número correto de valores)
-        const query = `INSERT INTO usuarios (nome, data_nascimento, telefone, email, consent_info, consent_guardar) VALUES (?, ?, ?, ?, ?, ?)`;
-        await pool.query(query, [nome, data_nascimento, telefone, email, consent_info, consent_guardar]);
-
-        res.status(201).json({ mensagem: "Usuário cadastrado com sucesso!" });
-
-    } catch (error) {
-        console.error("❌ Erro ao cadastrar usuário:", error);
-        res.status(500).json({ mensagem: "Erro ao cadastrar usuário." });
-    }
-});
-
 // Função de Cálculo do Temperamento e Subtemperamento
 function calcularPontuacao(respostas) {
     let contagemTemperatura = { Quente: 0, Frio: 0 };
