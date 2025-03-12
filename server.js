@@ -44,6 +44,71 @@ pool.getConnection((err, connection) => {
     connection.release(); // Libera a conexão
 });
 
+
+//Cadastro do usuario
+app.post("/cadastrar-usuario", async (req, res) => {
+    try {
+        const { nome, email, telefone, lingua_teste, data_nascimento } = req.body;
+
+        if (!nome || !email || !data_nascimento || !lingua_teste) {
+            return res.status(400).json({ mensagem: "Todos os campos obrigatórios devem ser preenchidos!" });
+        }
+
+        const query = `INSERT INTO resultados (nome, email, telefone, lingua_teste, data_nascimento, data_teste) 
+                       VALUES (?, ?, ?, ?, ?, NOW())`;
+        const [result] = await pool.query(query, [nome, email, telefone, lingua_teste, data_nascimento]);
+
+        res.status(201).json({ mensagem: "Usuário cadastrado com sucesso!", id_usuario: result.insertId });
+
+    } catch (error) {
+        console.error("❌ Erro ao cadastrar usuário:", error);
+        res.status(500).json({ mensagem: "Erro ao cadastrar usuário." });
+    }
+});
+
+
+
+//Salvar resposta
+app.post("/salvar-respostas", async (req, res) => {
+    try {
+        const { id_usuario, hora_inicio, hora_conclusao, respostas } = req.body;
+
+        if (!id_usuario || !hora_inicio || !hora_conclusao || !respostas || respostas.length !== 42) {
+            return res.status(400).json({ mensagem: "ID do usuário, horários e 42 respostas são obrigatórios!" });
+        }
+
+        // 🔹 Buscar dados do usuário para calcular idade
+        const [userRows] = await pool.query("SELECT data_nascimento, data_teste FROM resultados WHERE id = ?", [id_usuario]);
+        if (userRows.length === 0) {
+            return res.status(404).json({ mensagem: "Usuário não encontrado." });
+        }
+
+        const { data_nascimento, data_teste } = userRows[0];
+        const idade = calcularIdade(data_nascimento, data_teste);
+        const tempoTeste = calcularTempoTeste(hora_inicio, hora_conclusao);
+        const { temperamento, subtemperamento } = calcularPontuacao(respostas);
+
+        // 🔹 Atualizar os resultados do usuário
+        const query = `UPDATE resultados SET 
+                        hora_inicio = ?, hora_conclusao = ?, idade = ?, tempo_teste = ?, 
+                        temperamento = ?, subtemperamento = ?, 
+                        q1=?, q2=?, q3=?, q4=?, q5=?, q6=?, q7=?, q8=?, q9=?, q10=?,
+                        q11=?, q12=?, q13=?, q14=?, q15=?, q16=?, q17=?, q18=?, q19=?, q20=?,
+                        q21=?, q22=?, q23=?, q24=?, q25=?, q26=?, q27=?, q28=?, q29=?, q30=?,
+                        q31=?, q32=?, q33=?, q34=?, q35=?, q36=?, q37=?, q38=?, q39=?, q40=?, 
+                        q41=?, q42=? 
+                      WHERE id = ?`;
+
+        await pool.query(query, [hora_inicio, hora_conclusao, idade, tempoTeste, temperamento, subtemperamento, ...respostas, id_usuario]);
+
+        res.status(200).json({ mensagem: "Respostas salvas com sucesso!" });
+
+    } catch (error) {
+        console.error("❌ Erro ao salvar respostas:", error);
+        res.status(500).json({ mensagem: "Erro ao salvar respostas." });
+    }
+});
+
 // Função de Cálculo do Temperamento e Subtemperamento
 function calcularPontuacao(respostas) {
     let contagemTemperatura = { Quente: 0, Frio: 0 };
