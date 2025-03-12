@@ -51,10 +51,11 @@ app.post("/salvar-resultado", async (req, res) => {
         const { nome, email, telefone, lingua_teste, data_nascimento, hora_inicio, hora_conclusao, consent_info, consent_guardar, respostas } = req.body;
 
         if (!nome || !email || !data_nascimento || !hora_inicio || !hora_conclusao || !respostas || respostas.length !== 42) {
-            return res.status(400).json({ mensagem: "Todos os campos obrigatórios devem ser preenchidos corretamente!" });
+            console.error("❌ ERRO: O número de respostas não é 42! Respostas recebidas:", respostas.length);
+            return res.status(400).json({ mensagem: "Todas as 42 respostas são obrigatórias!" });
         }
 
-        // 🔹 Definir data_teste corretamente
+        // 🔹 Garantir que data_teste esteja definida corretamente
         const data_teste = new Date().toISOString().split("T")[0];
 
         console.log("📌 Data do teste:", data_teste);
@@ -69,6 +70,9 @@ app.post("/salvar-resultado", async (req, res) => {
         const { temperamento, subtemperamento } = calcularPontuacao(respostas);
 
         console.log("📌 Cálculos realizados:", { idade, tempo_teste, temperamento, subtemperamento });
+
+        // 🔹 Garantir que a lista de respostas tenha exatamente 42 valores
+        console.log("📌 Número de respostas recebidas:", respostas.length);
 
         // 🔹 Query para inserir todos os dados de uma vez
         const query = `INSERT INTO resultados 
