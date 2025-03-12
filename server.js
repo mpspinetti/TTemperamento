@@ -8,9 +8,10 @@ const cors = require("cors");
 const fs = require("fs");
 const path = require("path");
 const app = express(); 
+const mysql = require("mysql2/promise");
 
 app.use(cors({
-    origin: "https://kellywaideman.com", // Altere para seu domínio real
+    origin: "https://kellywaideman.com",
     methods: "GET,POST",
     allowedHeaders: "Content-Type"
 }));
@@ -20,27 +21,63 @@ app.use(cors({
 app.use(express.json({ limit: "10mb", type: "application/json", charset: "utf-8" }));
 app.use(express.urlencoded({ extended: true }));
 
-// Configuração do PostgreSQL
-const pool = new Pool({
-    user: process.env.DB_USER,
-    host: process.env.DB_HOST,
-    database: process.env.DB_NAME,
-    password: process.env.DB_PASSWORD,
+// Configuração do MySQL
+const pool = mysql.createPool({
+    host: process.env.DB_HOST,  // 🔹 Defina no .env
+    user: process.env.DB_USER,  // 🔹 Usuário do banco
+    password: process.env.DB_PASSWORD,  // 🔹 Senha do banco
+    database: process.env.DB_NAME,  // 🔹 Nome do banco
     port: process.env.DB_PORT,
-    application_name: "TTemperamento",
-    client_encoding: "UTF8"
+    waitForConnections: true,
+    connectionLimit: 10,
+    queueLimit: 0
 
 });
 
 // Teste de conexão com o banco de dados
-pool.connect((err, client, release) => {
+pool.getConnection((err, connection) => {
     if (err) {
-        console.error("❌ Erro ao conectar ao PostgreSQL:", err.stack);
-    } else {
-        console.log("✅ Conexão com PostgreSQL estabelecida com sucesso!");
+        console.error("❌ Erro ao conectar ao MySQL:", err);
+        return;
     }
-    release();
+    console.log("✅ Conectado ao MySQL no HostGator!");
+    connection.release(); // Libera a conexão
 });
+
+// Inclusão Cadastro de Usuário
+app.post("/registrar-linguagem", async (req, res) => {
+    try {
+        const { lingua_teste, data_teste } = req.body;
+
+        if (!lingua_teste || !data_teste) {
+            return res.status(400).json({ mensagem: "Idioma e data do teste são obrigatórios!" });
+        }
+
+        const query = `INSERT INTO escolha_linguagem (idioma, data_teste) VALUES (?, ?)`;
+        await pool.query(query, [lingua_teste, data_teste]);
+
+        res.status(201).json({ mensagem: "Idioma registrado com sucesso!" });
+
+    } catch (error) {
+        console.error("❌ Erro ao registrar idioma:", error);
+        res.status(500).json({ mensagem: "Erro ao registrar idioma." });
+    }
+});
+
+app.post("/cadastrar-usuario", async (req, res) => {
+    try {
+        const { nome, data_nascimento, telefone, email, consent_info, consent_guardar } = req.body;
+
+        const query = `INSERT INTO usuarios (nome, data_nascimento, telefone, email, consent_info, consent_guardar) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`;
+        await pool.query(query, [nome, data_nascimento, telefone, email, consent_info, consent_guardar]);
+
+        res.status(201).json({ mensagem: "Usuário cadastrado com sucesso!" });
+
+    } catch (error) {
+        res.status(500).json({ mensagem: "Erro ao cadastrar usuário." });
+    }
+});
+
 
 // Função de Cálculo do Temperamento e Subtemperamento
 function calcularPontuacao(respostas) {
@@ -86,6 +123,61 @@ function calcularPontuacao(respostas) {
     return { temperamento: temperamentoFinal, subtemperamento: subtemperamentoFinal };
 }
 
+// 📌 Calcular idade com base na data de nascimento
+function calcularIdade(dataNascimento, dataTeste) {
+    if (!dataNascimento || !dataTeste) {
+        console.error("❌ Erro: Datas inválidas fornecidas para calcularIdade. dataNascimento:", dataNascimento, "dataTeste:", dataTeste);
+        return "Erro";
+    }
+
+    const nascimento = new Date(dataNascimento);
+    const teste = new Date(dataTeste);
+
+    if (isNaN(nascimento.getTime()) || isNaN(teste.getTime())) {
+        console.error("❌ Erro: Formato inválido de data para calcularIdade. DataNascimento:", dataNascimento, "DataTeste:", dataTeste);
+        return "Erro";
+    }
+
+    let idade = teste.getFullYear() - nascimento.getFullYear();
+    const mes = teste.getMonth() - nascimento.getMonth();
+    
+    if (mes < 0 || (mes === 0 && teste.getDate() < nascimento.getDate())) {
+        idade--;
+    }
+
+    console.log(`📌 Idade calculada corretamente: ${idade}`);
+    return idade;
+}
+
+// 📌 Calcular tempo de teste
+function calcularTempoTeste(horaInicio, horaConclusao) {
+    if (!horaInicio || !horaConclusao) {
+        console.error("❌ Erro: horaInicio ou horaConclusao estão vazios.", "Hora_Inicio:", horaInicio, "Hora_Conclusao:", horaConclusao);
+        return "00:00:00"; 
+    }
+
+    try {
+        const inicio = new Date(`1970-01-01T${horaInicio}Z`);
+        const fim = new Date(`1970-01-01T${horaConclusao}Z`);
+
+        if (isNaN(inicio.getTime()) || isNaN(fim.getTime())) {
+            throw new Error("Formato inválido de hora.");
+        }
+
+        const diferencaMs = fim - inicio;
+        const segundos = Math.floor((diferencaMs / 1000) % 60);
+        const minutos = Math.floor((diferencaMs / (1000 * 60)) % 60);
+        const horas = Math.floor((diferencaMs / (1000 * 60 * 60)) % 24);
+
+        return `${String(horas).padStart(2, "0")}:${String(minutos).padStart(2, "0")}:${String(segundos).padStart(2, "0")}`;
+    } catch (error) {
+        console.error("❌ Erro ao calcular tempo de teste:", error.message);
+        return "00:00:00";
+    }
+}
+
+
+
 // Endpoint para Receber e Salvar os Resultados
 
 app.use((req, res, next) => {
@@ -97,61 +189,57 @@ app.post("/salvar-resultado", async (req, res) => {
     try {
         const { usuario_id, nome, email, telefone, data_nascimento, tempo_teste, respostas } = req.body;
 
-        // **Verifica se os dados estão chegando corretamente**
-        console.log(`📌 Nome recebido: ${nome}`);
-
-        // **Verificação de campos obrigatórios**
+        // 📌 Verificação de campos obrigatórios
         if (!usuario_id || !nome || !email || !data_nascimento || !tempo_teste || !respostas) {
             return res.status(400).json({ mensagem: "Erro: Todos os campos obrigatórios devem ser preenchidos." });
         }
 
-        // Converter tempo_teste para string, se não for
-        const tempoTesteStr = typeof tempo_teste === 'string' ? tempo_teste : JSON.stringify(tempo_teste);
-        
-        // Determinar o temperamento e subtemperamento com base nas respostas
+        // 📌 Converter tempo do teste para string, se necessário
+        const tempoTesteStr = calcularTempoTeste(dados.Hora_Inicio, dados.Hora_conclusao);
+        console.log("🔍 Tempo de Teste Calculado:", tempoTesteStr);
+
+        // 📌 Determinar o temperamento e subtemperamento com base nas respostas
         const { temperamento, subtemperamento } = calcularPontuacao(respostas);
 
-        console.log(`📌 Salvando resultado para ${nome} - Temperamento: ${temperamento}, Subtemperamento: ${subtemperamento}`);
+        console.log(`📌 Salvando resultado para ${nome} - Idade: ${idade}, Tempo de Teste: ${tempoTesteStr}, Temperamento: ${temperamento}, Subtemperamento: ${subtemperamento}`);
 
+        // 📌 Query para armazenar os dados corretamente no banco
         const query = `
             INSERT INTO resultados 
-            (usuario_id, nome, email, telefone, data_nascimento, tempo_teste, temperamento, subtemperamento)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-            RETURNING id;
+            (usuario_id, nome, email, telefone, data_nascimento, idade, tempo_teste, temperamento, subtemperamento)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);
+            ON DUPLICATE KEY UPDATE tempo_teste = VALUES(tempo_teste);
         `;
 
         const valores = [
             usuario_id, 
-            Buffer.from(nome, "utf-8").toString("utf-8"),  // Garante UTF-8
+            nome, 
             email, 
-            telefone ? Buffer.from(telefone, "utf-8").toString("utf-8") : null,  
+            telefone || null,  
             data_nascimento, 
-            tempoTesteStr, 
-            Buffer.from(temperamento, "utf-8").toString("utf-8"),
-            Buffer.from(subtemperamento, "utf-8").toString("utf-8")
-        ];      
+            idade, 
+            tempoTesteStr,  
+            temperamento, 
+            subtemperamento
+        ];
 
-        const resultado = await pool.query(query, valores);
+        // 📌 Executar a query no MySQL
+        pool.query(query, valores, (error, results) => {
+            if (error) {
+                console.error("❌ Erro ao salvar resultado no MySQL:", error);
+                return res.status(500).json({ mensagem: "Erro ao salvar resultado.", erro: error.message });
+            }
 
-        res.status(201).json({ mensagem: "Resultado salvo com sucesso!", id: resultado.rows[0].id });
+            console.log("✅ Resultado salvo com sucesso!", results.insertId);
+            res.status(201).json({ mensagem: "Resultado salvo com sucesso!", id: results.insertId });
+        });
 
     } catch (error) {
-        console.error("❌ Erro ao salvar resultado:", error);
-        res.status(500).json({ mensagem: "Erro ao salvar resultado.", erro: error.message });
+        console.error("❌ Erro ao processar requisição:", error);
+        res.status(500).json({ mensagem: "Erro interno do servidor.", erro: error.message });
     }
 });
 
-        // Função para calcular a idade com base na data de nascimento
-        function calcularIdade(dataNascimento) {
-        const hoje = new Date();
-        const nascimento = new Date(dataNascimento);
-        let idade = hoje.getFullYear() - nascimento.getFullYear();
-        const mes = hoje.getMonth() - nascimento.getMonth();
-        if (mes < 0 || (mes === 0 && hoje.getDate() < nascimento.getDate())) {
-        idade--;
-    }
-    return idade;
-}
 
 // Rota para gerar o PDF com o template_pt.pdf
 app.get("/gerar-pdf/:id", async (req, res) => {
@@ -159,21 +247,21 @@ app.get("/gerar-pdf/:id", async (req, res) => {
         const { id } = req.params;
 
         console.log("📌 Buscando template do banco...");
-        const templateResult = await pool.query("SELECT file FROM pdf_templates WHERE name = $1", ["template_pt"]);
+        const [templateResult] = await pool.query("SELECT file FROM pdf_templates WHERE name = ?", ["template_pt"]);
 
-        if (!templateResult.rows.length || !templateResult.rows[0].file) {
+        if (!templateResult.length || !templateResult[0].file) {
             console.error("🚨 Template não encontrado ou arquivo vazio!");
             return res.status(404).json({ mensagem: "Template não encontrado." });
         }
 
-        const templateBuffer = templateResult.rows[0].file;
+        const templateBuffer = templateResult[0].file;
         console.log(`✅ Template encontrado! Tamanho do arquivo recuperado: ${templateBuffer.length} bytes`);
 
         // Carregar o template PDF
-        const pdfDoc = await PDFDocument.load(templateBuffer);
+        let pdfDoc = await PDFDocument.load(templateBuffer);
         pdfDoc.registerFontkit(require("@pdf-lib/fontkit"));
-        const pages = pdfDoc.getPages();
-        const pagina1 = pages[0];
+        let pages = pdfDoc.getPages();
+        let pagina1 = pages[0];
 
         // Carregar fonte personalizada
         const fontPath = "./arial-unicode-ms.ttf";
@@ -184,15 +272,16 @@ app.get("/gerar-pdf/:id", async (req, res) => {
         const customFont = await pdfDoc.embedFont(fontBytes);
 
         console.log(`📌 Buscando dados do teste ID: ${id}`);
-        const dadosResult = await pool.query("SELECT * FROM resultados WHERE id = $1", [id]);
+        const [rows] = await pool.query("SELECT * FROM resultados WHERE id = ?", [id]);
+        const dados = rows.length > 0 ? rows[0] : null;
+        console.log("🔍 Dados extraídos do banco:", dados);
 
-        if (!dadosResult.rows.length) {
-            console.error("🚨 Resultado não encontrado no banco!");
-            return res.status(404).json({ mensagem: "Resultado não encontrado." });
+        if (!dados || Object.keys(dados).length === 0) {
+            console.error("❌ Nenhum resultado encontrado.");
+            return res.status(404).json({ mensagem: "Nenhum resultado encontrado." });
         }
-
+        
         console.log("✅ Dados do teste encontrados!");
-        const dados = dadosResult.rows[0];
                       
         // 🔹 Torne a função assíncrona adicionando `async`
         async function gerarGraficoPonteiro(angleIndex) {
@@ -246,7 +335,7 @@ app.get("/gerar-pdf/:id", async (req, res) => {
             if (!graficoBuffer || !(graficoBuffer instanceof Uint8Array)) {
                 throw new Error("❌ Erro: Buffer da imagem inválido.");
             }
-            const graficoImage = await pdfDoc.embedPng(graficoBuffer);
+            let graficoImage = await pdfDoc.embedPng(graficoBuffer);
 
             // Definir posição e tamanho da imagem no PDF
             pagina1.drawImage(graficoImage, {
@@ -259,141 +348,191 @@ app.get("/gerar-pdf/:id", async (req, res) => {
                         
         // Ajustar a largura máxima do parágrafo
         function formatText(text, maxWidth) {
-            const words = text.split(' ');
+            if (typeof text !== "string") {
+                console.error("❌ Erro: text não é uma string em formatText(). Valor recebido:", text);
+                return ["Erro ao processar texto"];
+            }
+        
             let lines = [];
-            let currentLine = '';
-            words.forEach(word => {
-                if ((currentLine + word).length > maxWidth) {
-                    lines.push(currentLine);
-                    currentLine = word;
-                } else {
-                    currentLine += (currentLine.length ? ' ' : '') + word;
-                }
+            let paragraphs = text.replace(/\r/g, "").split("\n"); // 🔹 Garante que '\n' seja respeitado
+        
+            paragraphs.forEach(paragraph => {
+                let words = paragraph.split(" ");
+                let currentLine = "";
+        
+                words.forEach(word => {
+                    if ((currentLine + " " + word).trim().length > maxWidth) {
+                        lines.push(currentLine.trim());
+                        currentLine = word;
+                    } else {
+                        currentLine += (currentLine.length ? " " : "") + word;
+                    }
+                });
+        
+                lines.push(currentLine.trim());
+                lines.push(""); // 🔹 Adiciona uma linha vazia para separar parágrafos corretamente
             });
-            lines.push(currentLine);
+        
             return lines;
         }
-                
+                                                
         // Buscar detalhes do temperamento e formatar detalhes
-        const tempResult = await pool.query("SELECT descricao, comportamento, positivo, atencao, desafio, sugestao FROM temperamentos WHERE temperamento = $1", [dados.temperamento]);
-        const tempData = tempResult.rows[0] || {};
-        const descricaoTemperamento = formatText(tempData.descricao || "Não disponível", 110);
-        const comportamento = formatText(tempData.comportamento || "Não disponível", 110);   
-        const pontosPositivos = formatText(tempData.positivo || "Não disponível", 110);
-        const pontosAtencao = formatText(tempData.atencao || "Não disponível", 110);   
-        const desafio = formatText(tempData.desafio || "Não disponível", 110);   
-        const sugestao = formatText(tempData.sugestao || "Não disponível", 110);  
-        const idade = calcularIdade(dados.data_nascimento); 
-        const tempoTesteStr = dados.tempo_teste.toISOString();
+        const [tempRows] = await pool.query(
+            "SELECT descricao, comportamento, positivo, atencao, desafio, sugestao FROM temperamentos WHERE temperamento = ?", 
+            [dados.temperamento]
+        );
+        
+        if (!Array.isArray(tempRows) || tempRows.length === 0) {
+            console.error("⚠ Nenhum resultado encontrado para o temperamento:", dados.temperamento);
+        }
+        // 🔹 Mantendo quebras de parágrafo corretamente antes de enviar ao PDF
+        let descricaoTemperamento = tempRows.map(row => row.descricao || "Não disponível");
+        let comportamento = tempRows.map(row => row.comportamento || "Não disponível");
+        let pontosPositivos = tempRows.map(row => row.positivo || "Não disponível");
+        let pontosAtencao = tempRows.map(row => row.atencao || "Não disponível");
+        let desafio = tempRows.map(row => row.desafio || "Não disponível");
+        let sugestao = tempRows.map(row => row.sugestao || "Não disponível");
+        let idade = calcularIdade(dados.data_nascimento, dados.data_teste);
+        let tempoTesteStr = calcularTempoTeste(dados.Hora_Inicio, dados.Hora_conclusao);
+
+        console.log("🔍 Tempo de Teste Calculado:", tempoTesteStr);
+        console.log("🔍 Idade Calculada:", idade);
+        console.log("🔍 Dados do usuário:", dados);
+        console.log("🔍 Temperamento recebido:", dados.temperamento);
+        console.log("🔍 Subtemperamento recebido:", dados.subtemperamento);
+        console.log("🔍 Tempo de Teste:", dados.tempo_teste);
+        console.log("🔍 Idade Calculada:", calcularIdade(dados.data_nascimento, dados.data_teste));
 
         // Buscar detalhes do subtemperamento e formatar detalhes
-        const subTempResult = await pool.query("SELECT descricao FROM subtemperamentos WHERE subtemperamento = $1", [dados.subtemperamento]);
-        const subTempData = subTempResult.rows[0] || {};
-        const descricaoSubtemperamento = formatText(subTempData.descricao || "Não disponível", 110);
+        const [subTempResult] = await pool.query(
+            "SELECT descricao FROM subtemperamentos WHERE subtemperamento = ?", 
+            [dados.subtemperamento]
+        );
+
+        if (!Array.isArray(subTempResult) || subTempResult.length === 0) {
+            console.error("⚠ Nenhum resultado encontrado para o temperamento:", dados.subtemperamento);
+        }
         
+        // Garantir que subTempData sempre tenha um valor válido
+        const subTempData = subTempResult.length > 0 ? subTempResult[0] : { descricao: "Não disponível" };
+        console.log("🔍 subTempData Final:", subTempData);      
+
+
+        // Garantir que descricaoSubtemperamento seja uma string válida antes de formatar
+        let descricaoSubtemperamento = subTempResult.map(row => row.descricao || "Não disponível");
+        console.log("🔍 Descrição do Subtemperamento:", subTempData.descricao);
+     
 
         // Buscar personagens relacionados ao temperamento  e formatar detalhes
-        const personagensResult = await pool.query("SELECT descricao FROM personagens WHERE temperamento = $1 LIMIT 3", [dados.temperamento]);
-        const personagens = personagensResult.rows.map(row => formatText(row.descricao || "Não disponível", 110));        
-
+        let [personagensRaw] = await pool.query(
+            "SELECT descricao FROM personagens WHERE temperamento = ? LIMIT 3", 
+            [dados.temperamento]
+        );
+        
+        let personagens = personagensRaw.flat().map(row => row.descricao || "Personagem não disponível");
+        
+        console.log("🔍 Personagens Corrigidos:", personagens);
+        console.log("🔍 Personagens extraídos:", personagens);
         console.log("📌 Adicionando informações ao PDF...");
+    
 
         // Ajustar formato da data para dia/mês/ano
         const dataFormatada = new Date(dados.data_teste).toLocaleDateString('pt-BR');
         const nascimentoFormatada = new Date(dados.data_nascimento).toLocaleDateString('pt-BR');
 
 
+        // Função para adicionar texto com quebra de página
+        function addTextWithPageBreak(page, textArray, startX, startY, pageLimit, pdfDoc, font, fontSize = 10) {
+            let yOffset = startY;
+        
+            textArray.forEach((line, index) => {
+                if (yOffset < pageLimit) {
+                    // Criar nova página se o espaço acabar
+                    page = pdfDoc.addPage([612, 792]); // Formato Letter
+                    yOffset = 750; // Resetar a posição no topo da nova página
+                }
+        
+                if (line.trim() === "") {
+                    yOffset -= 2; // 🔹 Espaçamento maior para parágrafos
+                } else {
+                    page.drawText(line, { x: startX, y: yOffset, size: fontSize, font });
+                    yOffset -= 13; // 🔹 Mantém o espaçamento normal entre linhas
+                }
+            });
+        
+            return page; // Retorna a última página usada
+        }
+                
+
         // Página 1 - Informações principais
-        pagina1.drawText(`${dados.id}`, { x: 70, y: 690, size: 14, font: customFont });
-        pagina1.drawText(`${dados.nome}`, { x: 155, y: 690, size: 14, font: customFont });
-        pagina1.drawText(`${nascimentoFormatada}`, { x: 150, y: 677, size: 10, font: customFont }); //data_nascimento
-        pagina1.drawText(`${idade}`, { x: 390, y: 677, size: 10, font: customFont });
-        pagina1.drawText(`${dataFormatada}`, { x: 150, y: 665, size: 10, font: customFont }); // data_teste
-        pagina1.drawText(`${dados.telefone || "Não informado"}`, { x: 390, y: 665, size: 10, font: customFont });
-        pagina1.drawText(`${tempoTesteStr}`, { x: 150, y: 654, size: 10, font: customFont });
-        pagina1.drawText(`${dados.email}`, { x: 390, y: 654, size: 10, font: customFont });
-        pagina1.drawText(`${dados.temperamento}`, { x: 420, y: 595, size: 10, font: customFont });
-        pagina1.drawText(`${dados.subtemperamento}`, { x: 420, y: 571, size: 10, font: customFont });
+            pagina1.drawText(`${dados.id}`, { x: 70, y: 690, size: 14, font: customFont });
+            pagina1.drawText(`${dados.nome}`, { x: 155, y: 690, size: 14, font: customFont });
+            pagina1.drawText(`${nascimentoFormatada}`, { x: 150, y: 677, size: 10, font: customFont }); //data_nascimento
+            pagina1.drawText(`${idade}`, { x: 390, y: 677, size: 10, font: customFont });
+            pagina1.drawText(`${dataFormatada}`, { x: 150, y: 665, size: 10, font: customFont }); // data_teste
+            pagina1.drawText(`${dados.telefone || "Não informado"}`, { x: 390, y: 665, size: 10, font: customFont });
+            pagina1.drawText(`${tempoTesteStr}`, { x: 150, y: 654, size: 10, font: customFont });
+            pagina1.drawText(`${dados.email}`, { x: 390, y: 654, size: 10, font: customFont });
+            pagina1.drawText(`${dados.temperamento}`, { x: 420, y: 595, size: 10, font: customFont });
+            pagina1.drawText(`${dados.subtemperamento}`, { x: 420, y: 571, size: 10, font: customFont });
 
-        // Página 1 - Descrição do temperamento
-        pagina1.drawText(`Descrição do Temperamento ${dados.temperamento}`, { x: 185, y: 495, size: 14, font: customFont });
-        //pagina1.drawText(`${tempData.descricao}`, { x: 38, y: 462, size: 10, font: customFont });
+        // Página 1 - Descricao do Temperamento
+            // Titulo do temperamento
+            pagina1.drawText(`Descrição do Temperamento ${dados.temperamento}`, { x: 185, y: 495, size: 14, font: customFont });
 
-        // Adicionar texto formatado
-        let yOffset = 495;
-        descricaoTemperamento.forEach(line => {
-        pagina1.drawText(line.toString(), { x: 50, y: yOffset, size: 10, font: customFont });
-        yOffset -= 12;
-       });
+            // Adicionar texto formatado descricao temperamento
+            descricaoTemperamento = formatText(String(descricaoTemperamento || "Não disponível"), 113);
+            pagina1 = addTextWithPageBreak(pagina1, descricaoTemperamento, 35, 475, 35, pdfDoc, customFont);
 
-        // Página 2 - Descrição do Subtemperamento e comportamento
-        const pagina2 = pages[1];
-        pagina2.drawText(`Características do Subtemperamento ${dados.subtemperamento}`, { x: 173, y: 707, size: 14, font: customFont });
-        //pagina2.drawText(`${subTempData.descricao}`, { x: 38, y: 680, size: 10, font: customFont });
-        //pagina2.drawText(`${subTempData.comportamento}`, { x: 38, y: 370, size: 10, font: customFont });
+            // Página 2 - Descrição do Subtemperamento e comportamento
+            let pagina2 = pages[1];
+            //  TITULO SUBTEMPERAMENTO
+            pagina2.drawText(`Características do Subtemperamento ${dados.subtemperamento}`, { x: 173, y: 707, size: 14, font: customFont });
 
-        // Adicionar texto formatado
-        yOffset = 680;
-        descricaoSubtemperamento.forEach(line => {
-        pagina2.drawText(line.toString(), { x: 50, y: yOffset, size: 10, font: customFont });
-        yOffset -= 12;
-        });
+            // Adicionar texto formatado DESCRICAO SUBTEMPERAMENTO
+            descricaoSubtemperamento = formatText(String(descricaoSubtemperamento || "Não disponível"), 113);
+            pagina2 = addTextWithPageBreak(pagina2, descricaoSubtemperamento, 35, 695, 35, pdfDoc, customFont);
 
-        // Adicionar texto formatado
-        yOffset = 370;
-        comportamento.forEach(line => {
-        pagina2.drawText(line.toString(), { x: 50, y: yOffset, size: 10, font: customFont });
-        yOffset -= 12;
-        });
+
+            // Adicionar texto formatado COMPORTAMENTO
+            comportamento = formatText(String(comportamento || "Não disponível"), 113);
+            pagina2 = addTextWithPageBreak(pagina2, comportamento, 35, 382, 35, pdfDoc, customFont);
+            
 
         // Página 3 - Descrição do pontos positivo e de atenção
-        const pagina3 = pages[2];
-        //pagina3.drawText(`${subTempData.positivo}`, { x: 38, y: 680, size: 10, font: customFont });
-        //pagina3.drawText(`${subTempData.atencao}`, { x: 38, y: 370, size: 10, font: customFont });
+            let pagina3 = pages[2];
+            // Adicionar texto formatado Pontos Positivos
+            pontosPositivos = formatText(String(pontosPositivos || "Não disponível"), 113);
+            pagina3 = addTextWithPageBreak(pagina3, pontosPositivos, 35, 695, 35, pdfDoc, customFont);
 
-        // Adicionar texto formatado
-        yOffset = 680;
-        pontosPositivos.forEach(line => {
-        pagina3.drawText(line.toString(), { x: 50, y: yOffset, size: 10, font: customFont });
-        yOffset -= 12;
-        });
-        // Adicionar texto formatado
-        yOffset = 370;
-        pontosAtencao.forEach(line => {
-        pagina3.drawText(line.toString(), { x: 50, y: yOffset, size: 10, font: customFont });
-        yOffset -= 12;
-        });
+            // Adicionar texto formatado das Atencoes
+            pontosAtencao = formatText(String(pontosAtencao || "Não disponível"), 113);
+            pagina3 = addTextWithPageBreak(pagina3, pontosAtencao, 35, 385, 35, pdfDoc, customFont);
+        
 
         // Página 4 - Descrição do Subtemperamento e comportamento
-        const pagina4 = pages[3];
-        //pagina4.drawText(`${subTempData.desafio}`, { x: 38, y: 680, size: 10, font: customFont });
-        //pagina4.drawText(`${subTempData.sugestao}`, { x: 38, y: 370, size: 10, font: customFont });
+            let pagina4 = pages[3];
+            // Adicionar texto formatado dos Desafios
+            desafio = formatText(String(desafio || "Não disponível"), 113);
+            pagina4 = addTextWithPageBreak(pagina4, desafio, 35, 692, 35, pdfDoc, customFont);
 
-        // Adicionar texto formatado
-        yOffset = 680;
-        desafio.forEach(line => {
-        pagina4.drawText(line.toString(), { x: 50, y: yOffset, size: 10, font: customFont });
-        yOffset -= 12;
-        });
+            // Adicionar texto formatado Sugestoes
+            sugestao = formatText(String(sugestao || "Não disponível"), 113);
+            pagina4 = addTextWithPageBreak(pagina4, sugestao, 35, 385, 35, pdfDoc, customFont);
 
-        // Adicionar texto formatado
-        yOffset = 370;
-        sugestao.forEach(line => {
-        pagina4.drawText(line.toString(), { x: 50, y: yOffset, size: 10, font: customFont });
-        yOffset -= 12;
-        });
-        
+
         // Página 5 - Personagens Relacionados
-        const pagina5 = pages[4];
-
-        // Adicionar texto formatado
-        yOffset = 680;
-        personagens.forEach(line => {
-        pagina5.drawText(line.toString(), { x: 50, y: yOffset, size: 10, font: customFont });
-        yOffset -= 12;
-        });
-     
+            let pagina5 = pages[4];
+            // Adicionar texto formatado Personagens
+            personagens = formatText(String(personagens || "Não disponível"), 113);
+            pagina5 = addTextWithPageBreak(pagina5, personagens, 35, 685, 35, pdfDoc, customFont);
+        
+        console.log("🔍 Descrição do Subtemperamento:", descricaoSubtemperamento);
+        console.log("🔍 Lado Positivo:", pontosPositivos);
+        console.log("🔍 Pontos de Atenção:", pontosAtencao);
+        console.log("🔍 Personagens Extraídos:", personagens);
         console.log("📌 Salvando o novo PDF...");
+
         const pdfBytes = await pdfDoc.save();
 
         console.log("✅ PDF gerado com sucesso! Enviando para o usuário...");

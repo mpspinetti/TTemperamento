@@ -1,5 +1,5 @@
-﻿subtemperamento;descricao;subtemperamento_en;descricao_en
-Brisa;"
+﻿id;subtemperamento;descricao;subtemperamento_en;descricao_en;
+1;Brisa;"
     Esse perfil apresenta características próximas ao fleumático: é agradável, sociável e pacífico, mas tem extrema dificuldade em tomar decisões e manter a consistência. Assim como uma leve brisa refresca e passa sem causar impacto, ele tende a evitar responsabilidades e compromissos de longo prazo. 
 
 •Exemplo prático
@@ -13,8 +13,8 @@ Brisa;"
    Can start several exciting projects but abandons them halfway because they lose interest quickly.
 
 • Challenge:
-    Develop consistency and decision-making ability."
-Ar;"
+    Develop consistency and decision-making ability.";
+2;Ar;"
     Aqui, o elemento ar se manifesta de forma menos dispersa. Ainda extrovertido e entusiasmado, o sanguíneo Ar tem mais energia para agir, mas continua preferindo a variedade à profundidade. Ele é inquieto e impulsivo, mas já mostra algum desejo por realização pessoal. 
 
 •Exemplo prático:
@@ -28,8 +28,8 @@ Ar;"
     Actively participates in groups and social projects but tends to avoid highly methodical tasks.
 
 • Challenge:
-    Learn to commit to deadlines and goals."
-Vento;"
+    Learn to commit to deadlines and goals.";
+3;Vento;"
     O vento é mais forte e direcionado, refletindo um sanguíneo mais produtivo e com uma leve influência colérica. Ele continua sendo carismático e envolvente, mas agora possui mais foco e propósito, conseguindo entregar resultados concretos. 
 
 •Exemplo prático
@@ -43,8 +43,8 @@ Vento;"
     Organizes events and leads teams with enthusiasm but still needs discipline to complete what they start.
 
 • Challenge:
- Go deeper into projects and avoid scattering attention."
-Brasa;"
+ Go deeper into projects and avoid scattering attention.";
+4;Brasa;"
     Este é um colérico mais brando, com uma pitada de leveza e flexibilidade. Embora tenha forte liderança, é mais diplomático e sabe ouvir opiniões diferentes, demonstrando justiça e equilíbrio. 
 
 •Exemplo prático:
@@ -58,8 +58,8 @@ Brasa;"
     Takes leadership positions in companies or groups, values collaboration, and avoids unnecessary confrontations.
 
 • Challenge:
-    Avoid letting the pursuit of justice become excessive perfectionism."
-Fogo;"
+    Avoid letting the pursuit of justice become excessive perfectionism.";
+5;Fogo;"
     O colérico Fogo é o líder nato, altamente proativo e competitivo. Sua energia é avassaladora, mas, se não controlada, pode se tornar destrutiva. Como o fogo que aquece, mas também pode queimar, ele precisa aprender a dosar sua intensidade para não afastar as pessoas ao seu redor. 
 
 •Exemplo prático:
@@ -73,8 +73,8 @@ Fogo;"
    An entrepreneur who thrives on ambition and courage but risks being seen as arrogant.
 
 • Challenge:
-    Cultivate empathy and work on their arrogance."
-Faísca;"
+    Cultivate empathy and work on their arrogance.";
+6;Faísca;"
     Este é o perfil mais explosivo e inflexível. Como uma faísca que pode provocar incêndios, ele é impaciente, rígido e crítico. Tem grande dificuldade em aceitar opiniões alheias e tende a ser visto como autoritário. 
 
 •Exemplo prático:
@@ -88,8 +88,8 @@ Faísca;"
    A boss who controls everything closely and has little patience for mistakes, creating tension in teams.
 
 • Challenge:
-   Develop patience and learn to delegate tasks."
-Pedra;"
+   Develop patience and learn to delegate tasks.";
+7;Pedra;"
     Aqui, o melancólico é extremamente rígido, crítico e solitário. Assim como uma pedra é dura e inabalável, esse perfil tem dificuldade em lidar com mudanças e raramente se abre para os outros. 
 
 •Exemplo prático:
@@ -103,8 +103,8 @@ Pedra;"
    Prefers to work alone, with a structured and predictable routine, avoiding unexpected changes.
 
 • Challenge:
-   Develop flexibility and open up to new experiences."
-Terra;"
+   Develop flexibility and open up to new experiences.";
+8;Terra;"
     Mais organizado e seguro, o melancólico Terra tem uma leve influência social, mas ainda prefere viver em seu próprio mundo. Ele é materialista e busca estabilidade, sem se preocupar em criar laços profundos. 
 
 •Exemplo prático:
@@ -118,8 +118,8 @@ Terra;"
   A competent professional who focuses on work but doesn't engage much with the team.
 
 • Challenge:
-   Cultivate relationships and learn to trust others."
-Argila;"
+   Cultivate relationships and learn to trust others.";
+9;Argila;"
     Esse perfil é mais maleável, mas também tende ao acúmulo e ao apego. Busca controle sobre tudo ao seu redor e se compara constantemente aos outros, o que gera insatisfação. 
 
 •Exemplo prático:
@@ -133,8 +133,8 @@ Argila;"
    Lives in pursuit of recognition but suffers from never feeling satisfied with what they have.
 
 • Challenge:
-   Work on acceptance and avoid constant comparison."
-Gelo;"
+   Work on acceptance and avoid constant comparison.";
+10;Gelo;"
     Este perfil é mais frio e distante, com uma tendência a ser analítico e reservado. Assim como o gelo, ele não se molda facilmente e precisa de segurança para se abrir. 
 
 •Exemplo prático:    Prefere ambientes previsíveis e evita mudanças, mantendo-se distante de conflitos. 
@@ -147,8 +147,8 @@ Gelo;"
    Prefers predictable environments and avoids change, keeping distant from conflicts.
 
 • Challenge:
-   Work on emotional expressiveness and accepting the unexpected."
-Água;"
+   Work on emotional expressiveness and accepting the unexpected.";
+11;Água;"
     Esse perfil é mais fluido e assertivo, lembrando um rio que segue seu curso, mas ainda com a essência pacificadora do fleumático. Em situações extremas, pode se transformar em um tsunami e agir com determinação. 
 
 •Exemplo prático:
@@ -162,8 +162,8 @@ Gelo;"
    In critical moments, they surprise by making firm decisions, though they prefer calmness.
 
 • Challenge:
-   Maintain balance between passivity and assertiveness."
-Vapor;"
+   Maintain balance between passivity and assertiveness.";
+12;Vapor;"
     Este é o perfil mais distraído e disperso. Tem dificuldade em se concentrar e em tomar decisões, preferindo adiar tarefas importantes. 
 
 •Exemplo prático:
@@ -177,4 +177,12 @@ Vapor;"
    Lives in the world of ideas but rarely puts their plans into action.
 
 • Challenge:
-   Develop focus and discipline to avoid procrastination."
+   Develop focus and discipline to avoid procrastination.";
+;;;;;
+;;;;;
+;;;;;
+;;;;;
+;;;;;
+;;;;;
+;;;;;
+;;;;;
