@@ -78,7 +78,7 @@ app.post("/salvar-resultado", async (req, res) => {
         console.log("📌 Cálculos realizados:", { idade, tempo_teste, temperamento, subtemperamento });
 
         // 🔹 Garantir que exatamente 42 respostas sejam passadas para o banco
-        const respostasCorrigidas = respostas.slice(0, 41);
+        const respostasCorrigidas = respostas.slice(0, 42);
 
         console.log("📌 Respostas corrigidas para inserção:", respostasCorrigidas.length, respostasCorrigidas);
 
