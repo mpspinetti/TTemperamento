@@ -80,7 +80,7 @@ app.post("/salvar-resultado", async (req, res) => {
         // 🔹 Log para garantir que temos 42 respostas antes da inserção
         console.log("📌 Respostas recebidas para inserção:", respostas);
 
-        // 🔹 Corrigir o `INSERT` removendo `id_usuario`, pois ele é `AUTO_INCREMENT`
+        // 🔹 Query corrigida para garantir que o número de colunas e valores está correto
         const query = `INSERT INTO resultados 
                        (hora_inicio, hora_conclusao, nome, email, telefone, lingua_teste, data_nascimento, data_teste, idade, tempo_teste, temperamento, subtemperamento, consent_info, consent_guardar,
                         q1, q2, q3, q4, q5, q6, q7, q8, q9, q10,
