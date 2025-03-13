@@ -57,8 +57,8 @@ app.post("/salvar-resultado", async (req, res) => {
 
         // 🔹 Verificar se a lista de respostas contém exatamente 42 itens
         if (!Array.isArray(respostas) || respostas.length !== 42) {
-            console.error("❌ ERRO: O número de respostas não é 42! Respostas recebidas:", respostas.length, respostas);
-            return res.status(400).json({ mensagem: `Número incorreto de respostas. Recebido: ${respostas.length}` });
+            console.error("❌ ERRO: Número incorreto de respostas! Respostas recebidas:", respostas.length, respostas);
+            return res.status(400).json({ mensagem: `Número incorreto de respostas. Esperado: 42, Recebido: ${respostas.length}` });
         }
 
         // 🔹 Garantir que data_teste esteja definida corretamente
@@ -77,8 +77,10 @@ app.post("/salvar-resultado", async (req, res) => {
 
         console.log("📌 Cálculos realizados:", { idade, tempo_teste, temperamento, subtemperamento });
 
-        // 🔹 Log para garantir que temos 42 respostas antes da inserção
-        console.log("📌 Respostas recebidas para inserção:", respostas);
+        // 🔹 Garantir que exatamente 42 respostas sejam passadas para o banco
+        const respostasCorrigidas = respostas.slice(0, 41);
+
+        console.log("📌 Respostas corrigidas para inserção:", respostasCorrigidas.length, respostasCorrigidas);
 
         // 🔹 Query corrigida para garantir que o número de colunas e valores está correto
         const query = `INSERT INTO resultados 
@@ -97,7 +99,7 @@ app.post("/salvar-resultado", async (req, res) => {
 
         await pool.query(query, [
             hora_inicio, hora_conclusao, nome, email, telefone, lingua_teste, data_nascimento, data_teste, idade, tempo_teste, temperamento, subtemperamento, consent_info, consent_guardar,
-            ...respostas
+            ...respostasCorrigidas
         ]);
 
         console.log("✅ Dados inseridos com sucesso!");
